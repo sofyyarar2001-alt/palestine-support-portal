@@ -14,13 +14,241 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_notes: {
+        Row: {
+          author_email: string
+          complaint_id: string
+          created_at: string
+          id: string
+          note: string
+        }
+        Insert: {
+          author_email: string
+          complaint_id: string
+          created_at?: string
+          id?: string
+          note: string
+        }
+        Update: {
+          author_email?: string
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      attachments: {
+        Row: {
+          complaint_id: string
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+        }
+        Insert: {
+          complaint_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+        }
+        Update: {
+          complaint_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      complaints: {
+        Row: {
+          address: string | null
+          amount: number | null
+          category: string
+          city: string | null
+          created_at: string
+          details: string
+          email: string | null
+          full_name: string
+          id: string
+          national_id: string
+          phone: string
+          phone_last4: string
+          reference: string
+          respondent_name: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          amount?: number | null
+          category: string
+          city?: string | null
+          created_at?: string
+          details: string
+          email?: string | null
+          full_name: string
+          id?: string
+          national_id: string
+          phone: string
+          phone_last4: string
+          reference: string
+          respondent_name?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          amount?: number | null
+          category?: string
+          city?: string | null
+          created_at?: string
+          details?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          national_id?: string
+          phone?: string
+          phone_last4?: string
+          reference?: string
+          respondent_name?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      signatures: {
+        Row: {
+          complaint_id: string
+          created_at: string
+          id: string
+          storage_path: string
+        }
+        Insert: {
+          complaint_id: string
+          created_at?: string
+          id?: string
+          storage_path: string
+        }
+        Update: {
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signatures_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      status_history: {
+        Row: {
+          changed_by: string | null
+          complaint_id: string
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          complaint_id: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          complaint_id?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_history_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_active_admin: { Args: never; Returns: boolean }
+      submit_complaint: { Args: { payload: Json }; Returns: Json }
+      track_complaint: {
+        Args: { p_last4: string; p_reference: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
