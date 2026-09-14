@@ -7,15 +7,12 @@ import {
 import {
   AlertCircle,
   Loader2,
-  LockKeyhole,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/login")({
@@ -28,7 +25,7 @@ export const Route = createFileRoute("/admin/login")({
       },
       {
         name: "description",
-        content: "صفحة دخول خاصة بمشرفي منصّة متعثرين فلسطين.",
+        content: "دخول مشرفي منصة متعثرين فلسطين.",
       },
       {
         name: "robots",
@@ -43,84 +40,79 @@ export const Route = createFileRoute("/admin/login")({
 function AdminLogin() {
   const navigate = useNavigate();
 
-  const [email] = useState("f90gimme@gmail.com");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
+  useEffect(() => {
+    let mounted = true;
 
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted || !session?.user) {
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("admin_profiles")
+        .select("id, full_name, role, is_active")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (
+        profile &&
+        profile.role === "admin" &&
+        profile.is_active === true
+      ) {
+        await navigate({
+          to: "/admin",
+          replace: true,
+        });
+      }
+    }
+
+    checkSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
+
+  async function signInWithGoogle() {
     setError(null);
     setLoading(true);
 
     try {
-      if (!password) {
-        setError("أدخل كلمة المرور.");
-        return;
-      }
+      const redirectTo =
+        `${window.location.origin}/admin/login`;
 
-      const { data, error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
+      const { error: oauthError } =
+        await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo,
+          },
         });
 
-      if (signInError || !data.user) {
-        console.error("LOGIN ERROR:", signInError);
+      if (oauthError) {
+        console.error("GOOGLE LOGIN ERROR:", oauthError);
 
         setError(
-          signInError?.message ||
-            "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+          oauthError.message ||
+            "تعذر بدء تسجيل الدخول باستخدام Google.",
         );
 
-        return;
+        setLoading(false);
       }
-
-      const { data: profile, error: profileError } =
-        await supabase
-          .from("admin_profiles")
-          .select("id, full_name, role, is_active")
-          .eq("id", data.user.id)
-          .maybeSingle();
-
-      if (profileError) {
-        console.error("PROFILE ERROR:", profileError);
-
-        await supabase.auth.signOut();
-
-        setError(
-          "تم تسجيل الدخول، لكن تعذر التحقق من صلاحية المشرف.",
-        );
-
-        return;
-      }
-
-      if (
-        !profile ||
-        profile.role !== "admin" ||
-        profile.is_active !== true
-      ) {
-        await supabase.auth.signOut();
-
-        setError(
-          "هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة.",
-        );
-
-        return;
-      }
-
-      await navigate({
-        to: "/admin",
-        replace: true,
-      });
     } catch (err) {
-      console.error("LOGIN UNEXPECTED ERROR:", err);
+      console.error("GOOGLE LOGIN UNEXPECTED ERROR:", err);
 
-      setError("حدث خطأ أثناء تسجيل الدخول.");
-    } finally {
+      setError(
+        "حدث خطأ أثناء الاتصال بخدمة Google.",
+      );
+
       setLoading(false);
     }
   }
@@ -147,68 +139,53 @@ function AdminLogin() {
             </p>
           </div>
 
-          <form
-            onSubmit={onSubmit}
-            className="mt-8 space-y-5"
+          {error && (
+            <div className="mt-6 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <Button
+            type="button"
+            onClick={signInWithGoogle}
+            disabled={loading}
+            className="mt-8 min-h-12 w-full"
           >
-            <div>
-              <Label className="mb-2 block text-sm font-semibold">
-                البريد الإلكتروني
-              </Label>
+            {loading ? (
+              <>
+                <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                جارٍ الاتصال بـ Google...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="ml-2 h-5 w-5"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M21.35 12.27c0-.78-.07-1.54-.22-2.27H12v4.3h5.22a4.46 4.46 0 0 1-1.94 2.93v2.44h3.14c1.84-1.69 2.93-4.18 2.93-7.4Z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 21.75c2.63 0 4.84-.87 6.45-2.35l-3.14-2.44c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.52A9.74 9.74 0 0 0 12 21.75Z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M6.54 13.85a5.84 5.84 0 0 1 0-3.7V7.63H3.3a9.75 9.75 0 0 0 0 8.74l3.24-2.52Z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 6.12c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.83 3.24 14.62 2.25 12 2.25a9.74 9.74 0 0 0-8.7 5.38l3.24 2.52C7.31 7.84 9.46 6.12 12 6.12Z"
+                  />
+                </svg>
 
-              <Input
-                value={email}
-                type="email"
-                readOnly
-                dir="ltr"
-                className="min-h-12"
-              />
-            </div>
-
-            <div>
-              <Label className="mb-2 block text-sm font-semibold">
-                كلمة المرور
-              </Label>
-
-              <Input
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                type="password"
-                required
-                dir="ltr"
-                className="min-h-12"
-                autoComplete="current-password"
-                placeholder="أدخل كلمة المرور"
-              />
-            </div>
-
-            {error && (
-              <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{error}</span>
-              </p>
+                تسجيل الدخول باستخدام Google
+              </>
             )}
-
-            <Button
-              type="submit"
-              className="min-h-12 w-full"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                  جارٍ تسجيل الدخول...
-                </>
-              ) : (
-                <>
-                  <LockKeyhole className="ml-2 h-4 w-4" />
-                  تسجيل الدخول
-                </>
-              )}
-            </Button>
-          </form>
+          </Button>
 
           <p className="mt-6 text-center text-sm">
             <Link
