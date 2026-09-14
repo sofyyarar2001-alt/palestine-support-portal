@@ -31,11 +31,12 @@ export const Route = createFileRoute("/admin")({
       });
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("admin_profiles")
-      .select("id, full_name, role, is_active")
-      .eq("id", data.user.id)
-      .maybeSingle();
+    const { data: profile, error: profileError } =
+      await supabase
+        .from("admin_profiles")
+        .select("id, full_name, role, is_active")
+        .eq("id", data.user.id)
+        .maybeSingle();
 
     if (
       profileError ||
@@ -60,6 +61,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminLayout() {
   const { admin } = Route.useRouteContext();
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -88,6 +90,7 @@ function AdminLayout() {
 
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+
           <Link
             to="/admin"
             className="flex items-center gap-3"
@@ -106,6 +109,7 @@ function AdminLayout() {
           </Link>
 
           <nav className="flex items-center gap-1">
+
             <Link
               to="/admin"
               activeOptions={{ exact: true }}
@@ -137,6 +141,7 @@ function AdminLayout() {
               <LogOut className="h-4 w-4" />
               خروج
             </button>
+
           </nav>
         </div>
 
