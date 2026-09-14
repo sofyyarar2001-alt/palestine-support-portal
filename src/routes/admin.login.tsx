@@ -59,17 +59,16 @@ function AdminLogin() {
     setLoading(true);
 
     try {
-      const cleanPhone = phone.replace(/\s+/g, "").trim();
+      const cleanPhone = phone
+        .replace(/\s+/g, "")
+        .trim();
 
       if (!cleanPhone || !password) {
-        setError("أدخل رقم المستخدم وكلمة المرور.");
+        setError(
+          "أدخل رقم المستخدم وكلمة المرور.",
+        );
         return;
       }
-
-      /*
-       * نحن لا نخزن كلمة المرور داخل الكود.
-       * الرقم يتحول داخليًا إلى بريد خاص بحساب Supabase.
-       */
 
       const email = `${cleanPhone}@admins.local`;
 
@@ -82,17 +81,27 @@ function AdminLogin() {
       });
 
       if (signInError || !data.user) {
-        setError("بيانات الدخول غير صحيحة.");
+        setError(
+          "بيانات الدخول غير صحيحة.",
+        );
         return;
       }
 
-      const { data: profile } = await supabase
-        .from("admin_profiles")
-        .select("email, full_name, is_active")
-        .eq("email", email)
-        .maybeSingle();
+      const { data: profile, error: profileError } =
+        await supabase
+          .from("admin_profiles")
+          .select(
+            "id, full_name, role, is_active",
+          )
+          .eq("id", data.user.id)
+          .maybeSingle();
 
-      if (!profile?.is_active) {
+      if (
+        profileError ||
+        !profile ||
+        !profile.is_active ||
+        profile.role !== "admin"
+      ) {
         await supabase.auth.signOut();
 
         setError(
@@ -125,11 +134,9 @@ function AdminLogin() {
       <div className="flag-bar h-1.5 w-full" />
 
       <div className="flex flex-1 items-center justify-center px-4 py-12">
-
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
 
           <div className="text-center">
-
             <BrandLogo className="mx-auto h-14 w-14" />
 
             <h1 className="mt-4 text-xl font-bold">
@@ -139,7 +146,6 @@ function AdminLogin() {
             <p className="mt-2 text-sm text-muted-foreground">
               الدخول مخصّص للمشرفين المصرّح لهم فقط.
             </p>
-
           </div>
 
           <form
@@ -147,9 +153,7 @@ function AdminLogin() {
             className="mt-8 space-y-5"
             autoComplete="off"
           >
-
             <div>
-
               <Label className="mb-2 block text-sm font-semibold">
                 رقم المستخدم
               </Label>
@@ -167,11 +171,9 @@ function AdminLogin() {
                 name="admin-user-id"
                 autoComplete="off"
               />
-
             </div>
 
             <div>
-
               <Label className="mb-2 block text-sm font-semibold">
                 كلمة المرور
               </Label>
@@ -188,16 +190,12 @@ function AdminLogin() {
                 name="admin-login-secret"
                 autoComplete="off"
               />
-
             </div>
 
             {error && (
               <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
-
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
                 {error}
-
               </p>
             )}
 
@@ -206,7 +204,6 @@ function AdminLogin() {
               className="min-h-12 w-full"
               disabled={loading}
             >
-
               {loading ? (
                 <Loader2 className="ml-2 h-4 w-4 animate-spin" />
               ) : (
@@ -214,24 +211,19 @@ function AdminLogin() {
               )}
 
               تسجيل الدخول
-
             </Button>
-
           </form>
 
           <p className="mt-6 text-center text-sm">
-
             <Link
               to="/"
               className="text-muted-foreground hover:text-foreground"
             >
               العودة إلى الموقع
             </Link>
-
           </p>
 
         </div>
-
       </div>
     </div>
   );
