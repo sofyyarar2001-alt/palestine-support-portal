@@ -18,7 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/admin/reset-password")({
+export const Route = createFileRoute(
+  "/admin/reset-password",
+)({
   ssr: false,
 
   head: () => ({
@@ -43,8 +45,8 @@ function ResetPassword() {
   const [confirmPassword, setConfirmPassword] =
     useState("");
 
-  const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const [error, setError] = useState<string | null>(
@@ -53,24 +55,6 @@ function ResetPassword() {
 
   useEffect(() => {
     let mounted = true;
-
-    async function checkRecoverySession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      if (!session?.user) {
-        setError(
-          "رابط تغيير كلمة المرور غير صالح أو انتهت صلاحيته.",
-        );
-      }
-
-      setChecking(false);
-    }
-
-    checkRecoverySession();
 
     const {
       data: { subscription },
@@ -88,13 +72,31 @@ function ResetPassword() {
       },
     );
 
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (!session?.user) {
+        setError(
+          "رابط تغيير كلمة المرور غير صالح أو انتهت صلاحيته.",
+        );
+      }
+
+      setChecking(false);
+    }
+
+    checkSession();
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  async function handleUpdatePassword(
+  async function updatePassword(
     event: React.FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
@@ -123,16 +125,7 @@ function ResetPassword() {
       });
 
     if (updateError) {
-      console.error(
-        "PASSWORD UPDATE ERROR:",
-        updateError,
-      );
-
-      setError(
-        updateError.message ||
-          "تعذر تغيير كلمة المرور.",
-      );
-
+      setError(updateError.message);
       setLoading(false);
       return;
     }
@@ -143,164 +136,147 @@ function ResetPassword() {
     await supabase.auth.signOut();
   }
 
-  if (checking) {
-    return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        dir="rtl"
-      >
-        <Loader2 className="h-7 w-7 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div
-      className="flex min-h-screen flex-col bg-secondary/40"
+      className="flex min-h-screen items-center justify-center bg-secondary/40 px-4"
       dir="rtl"
     >
-      <div className="flag-bar h-1.5 w-full" />
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
 
-      <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
+        <div className="text-center">
+          <BrandLogo className="mx-auto h-14 w-14" />
 
-          <div className="text-center">
-            <BrandLogo className="mx-auto h-14 w-14" />
+          <h1 className="mt-4 text-xl font-bold">
+            تغيير كلمة المرور
+          </h1>
 
-            <h1 className="mt-4 text-xl font-bold">
-              تغيير كلمة المرور
-            </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            اختر كلمة مرور جديدة لحساب المشرف.
+          </p>
+        </div>
+
+        {error && (
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {checking ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="h-7 w-7 animate-spin" />
+          </div>
+        ) : success ? (
+          <div className="mt-8 text-center">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
+
+            <h2 className="mt-4 font-bold">
+              تم تغيير كلمة المرور بنجاح
+            </h2>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              اختر كلمة مرور جديدة لحساب المشرف.
+              يمكنك الآن تسجيل الدخول.
             </p>
+
+            <Button
+              className="mt-6 w-full"
+              onClick={() =>
+                navigate({
+                  to: "/admin/login",
+                  replace: true,
+                })
+              }
+            >
+              تسجيل الدخول
+            </Button>
           </div>
-
-          {error && (
-            <div className="mt-6 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {success ? (
-            <div className="mt-8 text-center">
-              <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
-
-              <h2 className="mt-4 font-bold">
-                تم تغيير كلمة المرور بنجاح
-              </h2>
-
-              <p className="mt-2 text-sm text-muted-foreground">
-                يمكنك الآن تسجيل الدخول باستخدام كلمة
-                المرور الجديدة.
-              </p>
-
-              <Button
-                type="button"
-                className="mt-6 w-full"
-                onClick={() =>
-                  navigate({
-                    to: "/admin/login",
-                    replace: true,
-                  })
-                }
+        ) : (
+          <form
+            onSubmit={updatePassword}
+            className="mt-8 space-y-5"
+          >
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-medium"
               >
-                الذهاب إلى تسجيل الدخول
-              </Button>
+                كلمة المرور الجديدة
+              </label>
+
+              <div className="relative">
+                <LockKeyhole className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  required
+                  className="h-12 pr-10"
+                  dir="ltr"
+                />
+              </div>
             </div>
-          ) : (
-            <form
-              onSubmit={handleUpdatePassword}
-              className="mt-8 space-y-5"
-            >
-              <div>
-                <label
-                  htmlFor="password"
-                  className="mb-2 block text-sm font-medium"
-                >
-                  كلمة المرور الجديدة
-                </label>
 
-                <div className="relative">
-                  <LockKeyhole className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(event) =>
-                      setPassword(event.target.value)
-                    }
-                    placeholder="كلمة المرور الجديدة"
-                    autoComplete="new-password"
-                    required
-                    className="h-12 pr-10"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="confirmPassword"
-                  className="mb-2 block text-sm font-medium"
-                >
-                  تأكيد كلمة المرور
-                </label>
-
-                <div className="relative">
-                  <LockKeyhole className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(event) =>
-                      setConfirmPassword(
-                        event.target.value,
-                      )
-                    }
-                    placeholder="أعد كتابة كلمة المرور"
-                    autoComplete="new-password"
-                    required
-                    className="h-12 pr-10"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={
-                  loading ||
-                  !password ||
-                  !confirmPassword
-                }
-                className="h-12 w-full"
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="mb-2 block text-sm font-medium"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                    جارٍ تغيير كلمة المرور...
-                  </>
-                ) : (
-                  "تغيير كلمة المرور"
-                )}
-              </Button>
-            </form>
-          )}
+                تأكيد كلمة المرور
+              </label>
 
-          <p className="mt-6 text-center text-sm">
-            <Link
-              to="/admin/login"
-              className="text-muted-foreground hover:text-foreground"
+              <div className="relative">
+                <LockKeyhole className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) =>
+                    setConfirmPassword(
+                      event.target.value,
+                    )
+                  }
+                  required
+                  className="h-12 pr-10"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={
+                loading ||
+                !password ||
+                !confirmPassword
+              }
+              className="h-12 w-full"
             >
-              العودة إلى تسجيل الدخول
-            </Link>
-          </p>
+              {loading ? (
+                <>
+                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                  جارٍ الحفظ...
+                </>
+              ) : (
+                "تغيير كلمة المرور"
+              )}
+            </Button>
+          </form>
+        )}
 
-        </div>
+        <p className="mt-6 text-center text-sm">
+          <Link
+            to="/admin/login"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            العودة إلى تسجيل الدخول
+          </Link>
+        </p>
+
       </div>
     </div>
   );
