@@ -44,7 +44,9 @@ export const Route = createFileRoute("/admin")({
       error: profileError,
     } = await supabase
       .from("admin_profiles")
-      .select("id, full_name, role, is_active")
+      .select(
+        "id, full_name, role, is_active",
+      )
       .eq("id", data.user.id)
       .maybeSingle();
 
@@ -101,6 +103,7 @@ function AdminLayout() {
       <div className="flag-bar h-1.5 w-full" />
 
       <header className="border-b border-border bg-card">
+
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
 
           <Link
@@ -162,6 +165,7 @@ function AdminLayout() {
         <div className="mx-auto w-full max-w-7xl px-4 pb-2 text-xs text-muted-foreground">
           {admin.full_name || "المشرف"}
         </div>
+
       </header>
 
       <main className="mx-auto w-full max-w-7xl px-4 py-8">
