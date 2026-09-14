@@ -19,9 +19,8 @@ export const Route = createFileRoute("/admin")({
   ssr: false,
 
   beforeLoad: async ({ location }) => {
-    // صفحة تسجيل الدخول لا تحتاج تسجيل دخول مسبق
     if (location.pathname === "/admin/login") {
-      return;
+      return { admin: null };
     }
 
     const { data, error } = await supabase.auth.getUser();
@@ -32,26 +31,17 @@ export const Route = createFileRoute("/admin")({
       });
     }
 
-    const email = data.user.email;
-
-    if (!email) {
-      await supabase.auth.signOut();
-
-      throw redirect({
-        to: "/admin/login",
-      });
-    }
-
     const { data: profile, error: profileError } = await supabase
       .from("admin_profiles")
-      .select("email, full_name, is_active")
-      .eq("email", email)
+      .select("id, full_name, role, is_active")
+      .eq("id", data.user.id)
       .maybeSingle();
 
     if (
       profileError ||
       !profile ||
-      !profile.is_active
+      !profile.is_active ||
+      profile.role !== "admin"
     ) {
       await supabase.auth.signOut();
 
@@ -69,9 +59,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminLayout() {
-  const context = Route.useRouteContext();
-  const admin = context.admin;
-
+  const { admin } = Route.useRouteContext();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -81,10 +69,14 @@ function AdminLayout() {
 
     await supabase.auth.signOut();
 
-    navigate({
+    await navigate({
       to: "/admin/login",
       replace: true,
     });
+  }
+
+  if (!admin) {
+    return <Outlet />;
   }
 
   return (
@@ -96,7 +88,6 @@ function AdminLayout() {
 
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-
           <Link
             to="/admin"
             className="flex items-center gap-3"
@@ -115,7 +106,6 @@ function AdminLayout() {
           </Link>
 
           <nav className="flex items-center gap-1">
-
             <Link
               to="/admin"
               activeOptions={{ exact: true }}
@@ -147,15 +137,11 @@ function AdminLayout() {
               <LogOut className="h-4 w-4" />
               خروج
             </button>
-
           </nav>
         </div>
 
-        <div
-          className="mx-auto w-full max-w-7xl px-4 pb-2 text-xs text-muted-foreground"
-          dir="ltr"
-        >
-          {admin?.email ?? ""}
+        <div className="mx-auto w-full max-w-7xl px-4 pb-2 text-xs text-muted-foreground">
+          {admin.full_name || "المشرف"}
         </div>
       </header>
 
