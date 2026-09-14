@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
+const ADMIN_EMAIL = "f90gimme@gmail.com";
+
 export const Route = createFileRoute("/admin/login")({
   ssr: false,
 
@@ -44,7 +46,7 @@ export const Route = createFileRoute("/admin/login")({
 function AdminLogin() {
   const navigate = useNavigate();
 
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -59,42 +61,36 @@ function AdminLogin() {
     setLoading(true);
 
     try {
-      const cleanPhone = phone
-        .replace(/\s+/g, "")
-        .trim();
-
-      if (!cleanPhone || !password) {
+      if (!email || !password) {
         setError(
-          "أدخل رقم المستخدم وكلمة المرور.",
+          "أدخل البريد الإلكتروني وكلمة المرور.",
         );
         return;
       }
-
-      const email = `${cleanPhone}@admins.local`;
 
       const {
         data,
         error: signInError,
       } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
       if (signInError || !data.user) {
-        setError(
-          "بيانات الدخول غير صحيحة.",
-        );
+        setError("بيانات الدخول غير صحيحة.");
         return;
       }
 
-      const { data: profile, error: profileError } =
-        await supabase
-          .from("admin_profiles")
-          .select(
-            "id, full_name, role, is_active",
-          )
-          .eq("id", data.user.id)
-          .maybeSingle();
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from("admin_profiles")
+        .select(
+          "id, full_name, role, is_active",
+        )
+        .eq("id", data.user.id)
+        .maybeSingle();
 
       if (
         profileError ||
@@ -134,9 +130,11 @@ function AdminLogin() {
       <div className="flag-bar h-1.5 w-full" />
 
       <div className="flex flex-1 items-center justify-center px-4 py-12">
+
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
 
           <div className="text-center">
+
             <BrandLogo className="mx-auto h-14 w-14" />
 
             <h1 className="mt-4 text-xl font-bold">
@@ -146,6 +144,7 @@ function AdminLogin() {
             <p className="mt-2 text-sm text-muted-foreground">
               الدخول مخصّص للمشرفين المصرّح لهم فقط.
             </p>
+
           </div>
 
           <form
@@ -153,27 +152,30 @@ function AdminLogin() {
             className="mt-8 space-y-5"
             autoComplete="off"
           >
+
             <div>
+
               <Label className="mb-2 block text-sm font-semibold">
-                رقم المستخدم
+                البريد الإلكتروني
               </Label>
 
               <Input
-                value={phone}
+                value={email}
                 onChange={(e) =>
-                  setPhone(e.target.value)
+                  setEmail(e.target.value)
                 }
-                type="text"
-                inputMode="numeric"
+                type="email"
                 required
                 dir="ltr"
                 className="min-h-12"
-                name="admin-user-id"
+                name="admin-email"
                 autoComplete="off"
               />
+
             </div>
 
             <div>
+
               <Label className="mb-2 block text-sm font-semibold">
                 كلمة المرور
               </Label>
@@ -187,9 +189,10 @@ function AdminLogin() {
                 required
                 dir="ltr"
                 className="min-h-12"
-                name="admin-login-secret"
-                autoComplete="off"
+                name="admin-password"
+                autoComplete="new-password"
               />
+
             </div>
 
             {error && (
@@ -212,18 +215,22 @@ function AdminLogin() {
 
               تسجيل الدخول
             </Button>
+
           </form>
 
           <p className="mt-6 text-center text-sm">
+
             <Link
               to="/"
               className="text-muted-foreground hover:text-foreground"
             >
               العودة إلى الموقع
             </Link>
+
           </p>
 
         </div>
+
       </div>
     </div>
   );
