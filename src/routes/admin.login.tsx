@@ -27,10 +27,6 @@ export const Route = createFileRoute("/admin/login")({
         title: "دخول المشرفين — متعثرين فلسطين",
       },
       {
-        name: "description",
-        content: "دخول مشرفي منصة متعثرين فلسطين.",
-      },
-      {
         name: "robots",
         content: "noindex",
       },
@@ -57,9 +53,7 @@ function AdminLogin() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!mounted || !session?.user) {
-        return;
-      }
+      if (!mounted || !session?.user) return;
 
       const { data: profile } = await supabase
         .from("admin_profiles")
@@ -101,20 +95,10 @@ function AdminLogin() {
           password,
         });
 
-      if (loginError) {
-        console.error("LOGIN ERROR:", loginError);
-
+      if (loginError || !data.user) {
         setError(
           "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
         );
-
-        setLoading(false);
-        return;
-      }
-
-      if (!data.user) {
-        setError("تعذر تسجيل الدخول.");
-
         setLoading(false);
         return;
       }
@@ -122,9 +106,7 @@ function AdminLogin() {
       const { data: profile, error: profileError } =
         await supabase
           .from("admin_profiles")
-          .select(
-            "id, full_name, role, is_active",
-          )
+          .select("id, full_name, role, is_active")
           .eq("id", data.user.id)
           .maybeSingle();
 
@@ -137,7 +119,7 @@ function AdminLogin() {
         await supabase.auth.signOut();
 
         setError(
-          "هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة.",
+          "هذا الحساب غير مصرح له بالدخول.",
         );
 
         setLoading(false);
@@ -148,14 +130,11 @@ function AdminLogin() {
         to: "/admin",
         replace: true,
       });
-    } catch (err) {
-      console.error(
-        "ADMIN LOGIN UNEXPECTED ERROR:",
-        err,
-      );
+    } catch (error) {
+      console.error("LOGIN ERROR:", error);
 
       setError(
-        "حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.",
+        "حدث خطأ أثناء تسجيل الدخول.",
       );
 
       setLoading(false);
@@ -187,7 +166,6 @@ function AdminLogin() {
           {error && (
             <div className="mt-6 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
               <span>{error}</span>
             </div>
           )}
@@ -196,7 +174,6 @@ function AdminLogin() {
             onSubmit={handleLogin}
             className="mt-8 space-y-5"
           >
-
             <div>
               <label
                 htmlFor="email"
@@ -253,11 +230,7 @@ function AdminLogin() {
 
             <Button
               type="submit"
-              disabled={
-                loading ||
-                !email.trim() ||
-                !password
-              }
+              disabled={loading}
               className="h-12 w-full"
             >
               {loading ? (
@@ -269,10 +242,18 @@ function AdminLogin() {
                 "تسجيل الدخول"
               )}
             </Button>
-
           </form>
 
-          <p className="mt-6 text-center text-sm">
+          <p className="mt-4 text-center text-sm">
+            <Link
+              to="/admin/forgot-password"
+              className="text-primary hover:underline"
+            >
+              نسيت كلمة المرور؟
+            </Link>
+          </p>
+
+          <p className="mt-4 text-center text-sm">
             <Link
               to="/"
               className="text-muted-foreground hover:text-foreground"
