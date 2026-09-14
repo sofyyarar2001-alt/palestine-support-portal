@@ -18,8 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
-const ADMIN_EMAIL = "f90gimme@gmail.com";
-
 export const Route = createFileRoute("/admin/login")({
   ssr: false,
 
@@ -30,8 +28,7 @@ export const Route = createFileRoute("/admin/login")({
       },
       {
         name: "description",
-        content:
-          "صفحة دخول خاصة بمشرفي منصّة متعثرين فلسطين.",
+        content: "صفحة دخول خاصة بمشرفي منصّة متعثرين فلسطين.",
       },
       {
         name: "robots",
@@ -46,9 +43,8 @@ export const Route = createFileRoute("/admin/login")({
 function AdminLogin() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState(ADMIN_EMAIL);
+  const [email] = useState("f90gimme@gmail.com");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,42 +57,51 @@ function AdminLogin() {
     setLoading(true);
 
     try {
-      if (!email || !password) {
-        setError(
-          "أدخل البريد الإلكتروني وكلمة المرور.",
-        );
+      if (!password) {
+        setError("أدخل كلمة المرور.");
         return;
       }
 
-      const {
-        data,
-        error: signInError,
-      } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
+      const { data, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
       if (signInError || !data.user) {
-        setError("بيانات الدخول غير صحيحة.");
+        console.error("LOGIN ERROR:", signInError);
+
+        setError(
+          signInError?.message ||
+            "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+        );
+
         return;
       }
 
-      const {
-        data: profile,
-        error: profileError,
-      } = await supabase
-        .from("admin_profiles")
-        .select(
-          "id, full_name, role, is_active",
-        )
-        .eq("id", data.user.id)
-        .maybeSingle();
+      const { data: profile, error: profileError } =
+        await supabase
+          .from("admin_profiles")
+          .select("id, full_name, role, is_active")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+      if (profileError) {
+        console.error("PROFILE ERROR:", profileError);
+
+        await supabase.auth.signOut();
+
+        setError(
+          "تم تسجيل الدخول، لكن تعذر التحقق من صلاحية المشرف.",
+        );
+
+        return;
+      }
 
       if (
-        profileError ||
         !profile ||
-        !profile.is_active ||
-        profile.role !== "admin"
+        profile.role !== "admin" ||
+        profile.is_active !== true
       ) {
         await supabase.auth.signOut();
 
@@ -112,11 +117,9 @@ function AdminLogin() {
         replace: true,
       });
     } catch (err) {
-      console.error(err);
+      console.error("LOGIN UNEXPECTED ERROR:", err);
 
-      setError(
-        "تعذر تسجيل الدخول حاليًا. حاول مرة أخرى.",
-      );
+      setError("حدث خطأ أثناء تسجيل الدخول.");
     } finally {
       setLoading(false);
     }
@@ -130,11 +133,9 @@ function AdminLogin() {
       <div className="flag-bar h-1.5 w-full" />
 
       <div className="flex flex-1 items-center justify-center px-4 py-12">
-
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
 
           <div className="text-center">
-
             <BrandLogo className="mx-auto h-14 w-14" />
 
             <h1 className="mt-4 text-xl font-bold">
@@ -144,38 +145,27 @@ function AdminLogin() {
             <p className="mt-2 text-sm text-muted-foreground">
               الدخول مخصّص للمشرفين المصرّح لهم فقط.
             </p>
-
           </div>
 
           <form
             onSubmit={onSubmit}
             className="mt-8 space-y-5"
-            autoComplete="off"
           >
-
             <div>
-
               <Label className="mb-2 block text-sm font-semibold">
                 البريد الإلكتروني
               </Label>
 
               <Input
                 value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
                 type="email"
-                required
+                readOnly
                 dir="ltr"
                 className="min-h-12"
-                name="admin-email"
-                autoComplete="off"
               />
-
             </div>
 
             <div>
-
               <Label className="mb-2 block text-sm font-semibold">
                 كلمة المرور
               </Label>
@@ -189,16 +179,15 @@ function AdminLogin() {
                 required
                 dir="ltr"
                 className="min-h-12"
-                name="admin-password"
-                autoComplete="new-password"
+                autoComplete="current-password"
+                placeholder="أدخل كلمة المرور"
               />
-
             </div>
 
             {error && (
               <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                {error}
+                <span>{error}</span>
               </p>
             )}
 
@@ -208,29 +197,29 @@ function AdminLogin() {
               disabled={loading}
             >
               {loading ? (
-                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                <>
+                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                  جارٍ تسجيل الدخول...
+                </>
               ) : (
-                <LockKeyhole className="ml-2 h-4 w-4" />
+                <>
+                  <LockKeyhole className="ml-2 h-4 w-4" />
+                  تسجيل الدخول
+                </>
               )}
-
-              تسجيل الدخول
             </Button>
-
           </form>
 
           <p className="mt-6 text-center text-sm">
-
             <Link
               to="/"
               className="text-muted-foreground hover:text-foreground"
             >
               العودة إلى الموقع
             </Link>
-
           </p>
 
         </div>
-
       </div>
     </div>
   );
