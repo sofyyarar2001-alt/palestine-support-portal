@@ -31,19 +31,51 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Prepare Pages
-  run: |
-    mkdir -p dist
-    cp -r .output/public/* dist/ 2>/dev/null || true
-    cp -r dist/* dist/ 2>/dev/null || true
+      - name: Find build output
+        run: |
+          echo "=== BUILD OUTPUT ==="
+          find . -maxdepth 5 -type d \
+            \( -name "dist" -o -name ".output" -o -name "build" \) \
+            -print
 
-- name: Setup Pages
-  uses: actions/configure-pages@v5
+          echo "=== ROOT FILES ==="
+          ls -la
 
-- name: Upload artifact
-  uses: actions/upload-pages-artifact@v3
-  with:
-    path: ./dist
+          echo "=== OUTPUT CONTENT ==="
+          if [ -d ".output" ]; then
+            find .output -maxdepth 4 -type f -print
+          fi
+
+          if [ -d "dist" ]; then
+            find dist -maxdepth 4 -type f -print
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare Pages artifact
+        run: |
+          rm -rf pages-dist
+          mkdir -p pages-dist
+
+          if [ -d "dist" ] && [ "$(find dist -type f | wc -l)" -gt 0 ]; then
+            cp -R dist/. pages-dist/
+          elif [ -d ".output/public" ] && [ "$(find .output/public -type f | wc -l)" -gt 0 ]; then
+            cp -R .output/public/. pages-dist/
+          else
+            echo "ERROR: No static build output found."
+            echo "Available directories:"
+            find . -maxdepth 5 -type d -print
+            exit 1
+          fi
+
+          echo "=== PAGES ARTIFACT ==="
+          find pages-dist -maxdepth 4 -type f -print
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./pages-dist
 
   deploy:
     environment:
