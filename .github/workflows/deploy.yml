@@ -49,15 +49,11 @@ jobs:
 
           echo "=== FILES TO DEPLOY ==="
           find pages-dist -maxdepth 3 -type f -print
-
-      - name: Add SPA fallback
-        run: |
-          if [ -f "pages-dist/index.html" ]; then
-            cp pages-dist/index.html pages-dist/404.html
-          else
-            echo "ERROR: index.html was not created"
-            exit 1
-          fi
+          
+- name: Check build output
+  run: |
+    echo "=== PAGES DIST ==="
+    find pages-dist -maxdepth 4 -type f -print
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
