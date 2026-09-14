@@ -7,12 +7,15 @@ import {
 import {
   AlertCircle,
   Loader2,
+  LockKeyhole,
+  Mail,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
 
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/login")({
@@ -39,6 +42,9 @@ export const Route = createFileRoute("/admin/login")({
 
 function AdminLogin() {
   const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,37 +86,76 @@ function AdminLogin() {
     };
   }, [navigate]);
 
-  async function signInWithGoogle() {
+  async function handleLogin(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
     setError(null);
     setLoading(true);
 
     try {
-      const redirectTo =
-        `${window.location.origin}/admin/login`;
-
-      const { error: oauthError } =
-        await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo,
-          },
+      const { data, error: loginError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
         });
 
-      if (oauthError) {
-        console.error("GOOGLE LOGIN ERROR:", oauthError);
+      if (loginError) {
+        console.error("LOGIN ERROR:", loginError);
 
         setError(
-          oauthError.message ||
-            "تعذر بدء تسجيل الدخول باستخدام Google.",
+          "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
         );
 
         setLoading(false);
+        return;
       }
+
+      if (!data.user) {
+        setError("تعذر تسجيل الدخول.");
+
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } =
+        await supabase
+          .from("admin_profiles")
+          .select(
+            "id, full_name, role, is_active",
+          )
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+      if (
+        profileError ||
+        !profile ||
+        profile.role !== "admin" ||
+        profile.is_active !== true
+      ) {
+        await supabase.auth.signOut();
+
+        setError(
+          "هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة.",
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      await navigate({
+        to: "/admin",
+        replace: true,
+      });
     } catch (err) {
-      console.error("GOOGLE LOGIN UNEXPECTED ERROR:", err);
+      console.error(
+        "ADMIN LOGIN UNEXPECTED ERROR:",
+        err,
+      );
 
       setError(
-        "حدث خطأ أثناء الاتصال بخدمة Google.",
+        "حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.",
       );
 
       setLoading(false);
@@ -142,50 +187,90 @@ function AdminLogin() {
           {error && (
             <div className="mt-6 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+
               <span>{error}</span>
             </div>
           )}
 
-          <Button
-            type="button"
-            onClick={signInWithGoogle}
-            disabled={loading}
-            className="mt-8 min-h-12 w-full"
+          <form
+            onSubmit={handleLogin}
+            className="mt-8 space-y-5"
           >
-            {loading ? (
-              <>
-                <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                جارٍ الاتصال بـ Google...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="ml-2 h-5 w-5"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M21.35 12.27c0-.78-.07-1.54-.22-2.27H12v4.3h5.22a4.46 4.46 0 0 1-1.94 2.93v2.44h3.14c1.84-1.69 2.93-4.18 2.93-7.4Z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 21.75c2.63 0 4.84-.87 6.45-2.35l-3.14-2.44c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.52A9.74 9.74 0 0 0 12 21.75Z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M6.54 13.85a5.84 5.84 0 0 1 0-3.7V7.63H3.3a9.75 9.75 0 0 0 0 8.74l3.24-2.52Z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 6.12c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.83 3.24 14.62 2.25 12 2.25a9.74 9.74 0 0 0-8.7 5.38l3.24 2.52C7.31 7.84 9.46 6.12 12 6.12Z"
-                  />
-                </svg>
 
-                تسجيل الدخول باستخدام Google
-              </>
-            )}
-          </Button>
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-2 block text-sm font-medium"
+              >
+                البريد الإلكتروني
+              </label>
+
+              <div className="relative">
+                <Mail className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  placeholder="البريد الإلكتروني"
+                  autoComplete="username"
+                  required
+                  className="h-12 pr-10"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-medium"
+              >
+                كلمة المرور
+              </label>
+
+              <div className="relative">
+                <LockKeyhole className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  placeholder="كلمة المرور"
+                  autoComplete="current-password"
+                  required
+                  className="h-12 pr-10"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={
+                loading ||
+                !email.trim() ||
+                !password
+              }
+              className="h-12 w-full"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                  جارٍ تسجيل الدخول...
+                </>
+              ) : (
+                "تسجيل الدخول"
+              )}
+            </Button>
+
+          </form>
 
           <p className="mt-6 text-center text-sm">
             <Link
