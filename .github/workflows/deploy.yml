@@ -31,6 +31,13 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Find build output
+        run: |
+          echo "=== BUILD OUTPUT ==="
+          find . -maxdepth 4 -type d \( -name "dist" -o -name ".output" -o -name "build" \) -print
+          echo "=== ROOT ==="
+          ls -la
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
