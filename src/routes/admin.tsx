@@ -5,7 +5,7 @@ import { LayoutDashboard, ListOrdered, LogOut } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_admin")({
+export const Route = createFileRoute("/admin")({
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
