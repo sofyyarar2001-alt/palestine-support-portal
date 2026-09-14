@@ -34,7 +34,7 @@ jobs:
       - name: Find build output
         run: |
           echo "=== BUILD OUTPUT ==="
-          find . -maxdepth 4 -type d \( -name "dist" -o -name ".output" -o -name "build" \) -print
+          find . -maxdepth 5 -type d \( -name "dist" -o -name ".output" -o -name "build" \) -print
           echo "=== ROOT ==="
           ls -la
 
