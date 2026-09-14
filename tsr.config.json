@@ -1,5 +1,8 @@
 {
   "routesDirectory": "./src/routes",
   "generatedRouteTree": "./src/routeTree.gen.ts",
-  "routeFileIgnorePrefix": "-"
+  "routeFileIgnorePrefix": "-",
+  "quoteStyle": "double",
+  "semicolons": true,
+  "target": "react"
 }
