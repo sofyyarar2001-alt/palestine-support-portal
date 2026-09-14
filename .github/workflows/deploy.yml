@@ -1,4 +1,4 @@
-name: Deploy TanStack Start to GitHub Pages
+name: Deploy React/Vite to GitHub Pages
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Prepare static site
+      - name: Prepare Pages
         run: |
           rm -rf pages-dist
           mkdir -p pages-dist
@@ -43,17 +43,13 @@ jobs:
           elif [ -d "dist" ]; then
             cp -R dist/. pages-dist/
           else
-            echo "No build output found"
+            echo "ERROR: No build output directory found"
+            find . -maxdepth 4 -type d -print
             exit 1
           fi
 
-          echo "=== FILES TO DEPLOY ==="
-          find pages-dist -maxdepth 3 -type f -print
-          
-- name: Check build output
-  run: |
-    echo "=== PAGES DIST ==="
-    find pages-dist -maxdepth 4 -type f -print
+          echo "=== PAGES DIST ==="
+          find pages-dist -maxdepth 4 -type f -print
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
