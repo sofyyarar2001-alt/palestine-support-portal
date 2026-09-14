@@ -5,9 +5,7 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-
 import { useQueryClient } from "@tanstack/react-query";
-
 import {
   LayoutDashboard,
   ListOrdered,
@@ -17,29 +15,37 @@ import {
 import { BrandLogo } from "@/components/BrandLogo";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_admin")({
+export const Route = createFileRoute("/admin")({
   ssr: false,
 
-  beforeLoad: async () => {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+  beforeLoad: async ({ location }) => {
+    // صفحة تسجيل الدخول لا تحتاج تسجيل دخول مسبق
+    if (location.pathname === "/admin/login") {
+      return;
+    }
 
-    if (error || !user) {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data.user) {
       throw redirect({
         to: "/admin/login",
       });
     }
 
-    /*
-     * نبحث عن مشرف واحد مرتبط بالمستخدم الحالي.
-     * لا نستخدم maybeSingle بدون شرط المستخدم.
-     */
+    const email = data.user.email;
+
+    if (!email) {
+      await supabase.auth.signOut();
+
+      throw redirect({
+        to: "/admin/login",
+      });
+    }
+
     const { data: profile, error: profileError } = await supabase
       .from("admin_profiles")
-      .select("id, email, full_name, is_active")
-      .eq("id", user.id)
+      .select("email, full_name, is_active")
+      .eq("email", email)
       .maybeSingle();
 
     if (
@@ -63,23 +69,22 @@ export const Route = createFileRoute("/_admin")({
 });
 
 function AdminLayout() {
-  const { admin } = Route.useRouteContext();
+  const context = Route.useRouteContext();
+  const admin = context.admin;
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   async function signOut() {
-    try {
-      await queryClient.cancelQueries();
-      queryClient.clear();
+    await queryClient.cancelQueries();
+    queryClient.clear();
 
-      await supabase.auth.signOut();
-    } finally {
-      await navigate({
-        to: "/admin/login",
-        replace: true,
-      });
-    }
+    await supabase.auth.signOut();
+
+    navigate({
+      to: "/admin/login",
+      replace: true,
+    });
   }
 
   return (
@@ -113,16 +118,13 @@ function AdminLayout() {
 
             <Link
               to="/admin"
-              activeOptions={{
-                exact: true,
-              }}
+              activeOptions={{ exact: true }}
               activeProps={{
                 className: "bg-secondary",
               }}
               className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium hover:bg-secondary"
             >
               <LayoutDashboard className="h-4 w-4" />
-
               الرئيسية
             </Link>
 
@@ -134,7 +136,6 @@ function AdminLayout() {
               className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium hover:bg-secondary"
             >
               <ListOrdered className="h-4 w-4" />
-
               الشكاوى
             </Link>
 
@@ -144,21 +145,18 @@ function AdminLayout() {
               className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
             >
               <LogOut className="h-4 w-4" />
-
               خروج
             </button>
 
           </nav>
         </div>
 
-        {admin.email && (
-          <div
-            className="mx-auto w-full max-w-7xl px-4 pb-2 text-xs text-muted-foreground"
-            dir="ltr"
-          >
-            {admin.email}
-          </div>
-        )}
+        <div
+          className="mx-auto w-full max-w-7xl px-4 pb-2 text-xs text-muted-foreground"
+          dir="ltr"
+        >
+          {admin?.email ?? ""}
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-7xl px-4 py-8">
