@@ -1,4 +1,4 @@
-name: Deploy React/Vite to GitHub Pages
+name: Deploy TanStack Start to GitHub Pages
 
 on:
   push:
@@ -31,48 +31,38 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Find build output
+      - name: Prepare static site
         run: |
-          echo "=== BUILD OUTPUT ==="
-          find . -maxdepth 5 -type d \
-            \( -name "dist" -o -name ".output" -o -name "build" \) \
-            -print
+          rm -rf pages-dist
+          mkdir -p pages-dist
 
-          echo "=== ROOT FILES ==="
-          ls -la
-
-          echo "=== OUTPUT CONTENT ==="
-          if [ -d ".output" ]; then
-            find .output -maxdepth 4 -type f -print
+          if [ -d ".output/public" ]; then
+            cp -R .output/public/. pages-dist/
+          elif [ -d "dist/client" ]; then
+            cp -R dist/client/. pages-dist/
+          elif [ -d "dist" ]; then
+            cp -R dist/. pages-dist/
+          else
+            echo "No build output found"
+            exit 1
           fi
 
-          if [ -d "dist" ]; then
-            find dist -maxdepth 4 -type f -print
+          echo "=== FILES TO DEPLOY ==="
+          find pages-dist -maxdepth 3 -type f -print
+
+      - name: Add SPA fallback
+        run: |
+          if [ -f "pages-dist/index.html" ]; then
+            cp pages-dist/index.html pages-dist/404.html
+          else
+            echo "ERROR: index.html was not created"
+            exit 1
           fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Prepare Pages artifact
-        run: |
-          rm -rf pages-dist
-          mkdir -p pages-dist
-
-          if [ -d "dist" ] && [ "$(find dist -type f | wc -l)" -gt 0 ]; then
-            cp -R dist/. pages-dist/
-          elif [ -d ".output/public" ] && [ "$(find .output/public -type f | wc -l)" -gt 0 ]; then
-            cp -R .output/public/. pages-dist/
-          else
-            echo "ERROR: No static build output found."
-            echo "Available directories:"
-            find . -maxdepth 5 -type d -print
-            exit 1
-          fi
-
-          echo "=== PAGES ARTIFACT ==="
-          find pages-dist -maxdepth 4 -type f -print
-
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./pages-dist
@@ -86,6 +76,6 @@ jobs:
     needs: build
 
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
