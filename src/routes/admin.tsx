@@ -5,7 +5,9 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
+
 import { useQueryClient } from "@tanstack/react-query";
+
 import {
   LayoutDashboard,
   ListOrdered,
@@ -13,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { BrandLogo } from "@/components/BrandLogo";
+
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin")({
@@ -20,10 +23,15 @@ export const Route = createFileRoute("/admin")({
 
   beforeLoad: async ({ location }) => {
     if (location.pathname === "/admin/login") {
-      return { admin: null };
+      return {
+        admin: null,
+      };
     }
 
-    const { data, error } = await supabase.auth.getUser();
+    const {
+      data,
+      error,
+    } = await supabase.auth.getUser();
 
     if (error || !data.user) {
       throw redirect({
@@ -31,17 +39,19 @@ export const Route = createFileRoute("/admin")({
       });
     }
 
-    const { data: profile, error: profileError } =
-      await supabase
-        .from("admin_profiles")
-        .select("id, full_name, role, is_active")
-        .eq("id", data.user.id)
-        .maybeSingle();
+    const {
+      data: profile,
+      error: profileError,
+    } = await supabase
+      .from("admin_profiles")
+      .select("id, full_name, role, is_active")
+      .eq("id", data.user.id)
+      .maybeSingle();
 
     if (
       profileError ||
       !profile ||
-      !profile.is_active ||
+      profile.is_active !== true ||
       profile.role !== "admin"
     ) {
       await supabase.auth.signOut();
@@ -63,10 +73,12 @@ function AdminLayout() {
   const { admin } = Route.useRouteContext();
 
   const navigate = useNavigate();
+
   const queryClient = useQueryClient();
 
   async function signOut() {
     await queryClient.cancelQueries();
+
     queryClient.clear();
 
     await supabase.auth.signOut();
@@ -112,7 +124,9 @@ function AdminLayout() {
 
             <Link
               to="/admin"
-              activeOptions={{ exact: true }}
+              activeOptions={{
+                exact: true,
+              }}
               activeProps={{
                 className: "bg-secondary",
               }}
